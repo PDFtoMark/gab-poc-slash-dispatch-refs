@@ -1,0 +1,9 @@
+name: min
+on:
+  repository_dispatch:
+    types: [min-test]
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hi
