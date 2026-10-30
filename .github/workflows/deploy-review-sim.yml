@@ -1,0 +1,41 @@
+name: deploy-review-sim
+on:
+  repository_dispatch:
+    types: [deploy-review-command]
+jobs:
+  deploy-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all required values are present in the dispatch payload
+        id: vars
+        run: |
+          ERROR_MESSAGE=""
+          if [[ -z "${{ github.event.client_payload.slash_command.args.named.application }}" ]]; then
+            ERROR_MESSAGE="The 'application' argument is missing."
+          fi
+          if [[ -z "${{ github.event.client_payload.pull_request.number }}" ]]; then
+            ERROR_MESSAGE+=" Pull request number is missing."
+          fi
+          if [[ -z "${{ github.event.client_payload.pull_request.head.repo.full_name }}" ]]; then
+            ERROR_MESSAGE+=" Pull request head repo full name is missing."
+          fi
+          if [[ -z "${{ github.event.client_payload.pull_request.head.ref }}" ]]; then
+            ERROR_MESSAGE+=" Pull request head ref is missing."
+          fi
+          if [[ -n "$ERROR_MESSAGE" ]]; then
+            echo "::error::$ERROR_MESSAGE"
+            exit 1
+          fi
+          echo "All required values are present."
+      - name: Confirm injected command ran
+        run: |
+          echo "--- marker file (written by injected command) ---"
+          cat marker.txt 2>/dev/null || echo "NO MARKER"
+          echo "--- env value inherited from GITHUB_ENV poisoning ---"
+          echo "EVIL_FROM_INJECTION=${EVIL_FROM_INJECTION:-<unset>}"
+          echo "NODE_OPTIONS=${NODE_OPTIONS:-<unset>}"
+      - name: Simulated privileged step (receives deploy token)
+        env:
+          SIM_DEPLOY_TOKEN: ${{ secrets.SIM_DEPLOY_TOKEN }}
+        run: |
+          echo "privileged step reached; token length=${#SIM_DEPLOY_TOKEN}"
